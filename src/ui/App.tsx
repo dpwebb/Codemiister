@@ -56,6 +56,25 @@ const deferredCapabilities = [
   "deployment",
 ];
 
+const manualHandoffSteps = [
+  "Enter Admin idea.",
+  "Review Alpha plan and BETA task.",
+  "Check execution readiness.",
+  "Copy/export execution request package.",
+  "Manually paste the bounded BETA task/request into Codex.",
+  "Require BETA to return an execution result package.",
+  "Validate the result package.",
+  "Use the package result for Alpha review.",
+  "Save/copy transcript.",
+];
+
+const manualHandoffStatus = [
+  "Codemiister does not execute Codex automatically.",
+  "Execution packages are local/manual handoff artifacts.",
+  "Result packages are reported artifacts, not independently verified facts.",
+  "ADMIN remains in control.",
+];
+
 const exampleBetaResultJson = JSON.stringify(
   {
     filesChanged: ["src/domain/example.ts"],
@@ -343,6 +362,25 @@ export function App(): ReactElement {
           <span>No AI calls, persistence, auth, or deployment automation.</span>
         </div>
       </header>
+
+      <section className="section-block" aria-labelledby="handoff-heading">
+        <div className="section-heading">
+          <p className="eyebrow">Admin-controlled process</p>
+          <h2 id="handoff-heading">Manual Execution Handoff</h2>
+        </div>
+        <div className="handoff-panel">
+          <ol className="handoff-list">
+            {manualHandoffSteps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+          <ul className="handoff-status">
+            {manualHandoffStatus.map((status) => (
+              <li key={status}>{status}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
 
       <section className="section-block" aria-labelledby="idea-heading">
         <div className="section-heading">

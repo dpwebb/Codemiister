@@ -132,6 +132,41 @@ h3 {
   padding-bottom: 12px;
 }
 
+.handoff-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+  gap: 18px;
+  border: 1px solid #d9dde3;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.handoff-list,
+.handoff-status {
+  margin: 0;
+  color: #4d535c;
+}
+
+.handoff-list {
+  display: grid;
+  gap: 8px;
+  padding-left: 24px;
+}
+
+.handoff-status {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.handoff-status li {
+  border-left: 3px solid #1f6f5b;
+  padding-left: 12px;
+  font-weight: 700;
+}
+
 .idea-workspace {
   display: grid;
   grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
@@ -423,6 +458,7 @@ h3 {
   .idea-workspace,
   .review-workspace,
   .preview-columns,
+  .handoff-panel,
   .role-grid,
   .workflow-list {
     grid-template-columns: 1fr;

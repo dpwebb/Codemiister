@@ -38,6 +38,11 @@ const requiredLabels = [
   "Use package result for Alpha review",
   "BETA-reported",
   "Package betaResultReport loaded into BETA Result JSON",
+  "Manual Execution Handoff",
+  "Codemiister does not execute Codex automatically.",
+  "Execution packages are local/manual handoff artifacts.",
+  "Result packages are reported artifacts, not independently verified facts.",
+  "ADMIN remains in control.",
 ];
 
 for (const label of requiredLabels) {
