@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "admin:idea": "node scripts/admin-idea.ts",
+    "beta:execute:manual": "node scripts/manual-execute-beta-task.ts",
     "beta:review": "node scripts/review-beta-result.ts",
     "beta:task": "node scripts/export-beta-task.ts",
     "demo": "node scripts/demo-alpha-beta-loop.ts",
