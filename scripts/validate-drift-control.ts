@@ -1,0 +1,127 @@
+import assert from "node:assert/strict";
+
+import { createAlphaDevelopmentPlan } from "../src/alpha/planner.ts";
+import { reviewBetaResult } from "../src/alpha/review.ts";
+import type { BetaResultReport } from "../src/domain/workflow.ts";
+
+const now = "2026-05-28T00:00:00.000Z";
+
+const alphaOutput = createAlphaDevelopmentPlan({
+  ideaPrompt: {
+    id: "test-idea-001",
+    submittedAt: now,
+    goal: "Create a small planning assistant for bounded software tasks.",
+  },
+  existingProjectContextSummary:
+    "Repository contains doctrine documents and workflow contracts.",
+  now,
+});
+
+const betaTask = alphaOutput.recommendedFirstBetaTask;
+
+assert.equal(alphaOutput.status, "approved_for_beta");
+assert.equal(
+  alphaOutput.developmentPlan.proposedApplicationGoal,
+  "Create a small planning assistant for bounded software tasks.",
+);
+assert.equal(betaTask.planId, alphaOutput.developmentPlan.id);
+assert.equal(betaTask.taskTitle.length > 0, true);
+assert.equal(betaTask.allowedFilesOrAreas.length > 0, true);
+assert.equal(betaTask.forbiddenChanges.length > 0, true);
+assert.equal(
+  betaTask.forbiddenChanges.some((change) =>
+    change.toLowerCase().includes("full application"),
+  ),
+  true,
+);
+assert.equal(
+  betaTask.acceptanceChecks.some((check) =>
+    check.toLowerCase().includes("allowed"),
+  ),
+  true,
+);
+
+const continueReview = reviewBetaResult({
+  betaTaskPrompt: betaTask,
+  betaResultReport: createResultReport({
+    filesChanged: ["src/domain/workflow.ts"],
+    behaviorChanged: "Updated the workflow domain contract within scope.",
+    validationResult: "passed",
+    nextStepRecommendation: "continue",
+  }),
+  reviewedAt: now,
+});
+
+assert.equal(continueReview.decision, "continue");
+assert.equal(continueReview.statusAfterReview, "next_task_ready");
+assert.equal(continueReview.driftRisk.level, "low");
+assert.equal(continueReview.nextTaskReady, true);
+
+const revisionReview = reviewBetaResult({
+  betaTaskPrompt: betaTask,
+  betaResultReport: createResultReport({
+    filesChanged: ["src/domain/workflow.ts"],
+    behaviorChanged: "Updated the workflow domain contract within scope.",
+    validationResult: "failed",
+    deviationsFromPrompt: ["Validation failed and needs a bounded correction."],
+    nextStepRecommendation: "request_revision",
+  }),
+  reviewedAt: now,
+});
+
+assert.equal(revisionReview.decision, "request_revision");
+assert.equal(revisionReview.statusAfterReview, "revision_required");
+assert.equal(revisionReview.driftRisk.level, "medium");
+assert.equal(revisionReview.nextTaskReady, false);
+
+const haltReview = reviewBetaResult({
+  betaTaskPrompt: betaTask,
+  betaResultReport: createResultReport({
+    filesChanged: ["package.json", "src/domain/workflow.ts"],
+    behaviorChanged:
+      "Added database persistence outside the allowed task scope.",
+    deviationsFromPrompt: ["Changed package.json outside allowed areas."],
+    risks: ["Database persistence is a forbidden change for this task."],
+    validationResult: "passed",
+    nextStepRecommendation: "continue",
+  }),
+  reviewedAt: now,
+});
+
+assert.equal(haltReview.decision, "halt_for_admin");
+assert.equal(haltReview.statusAfterReview, "halted");
+assert.equal(
+  haltReview.driftRisk.level === "high" ||
+    haltReview.driftRisk.level === "blocked",
+  true,
+);
+assert.equal(haltReview.driftRisk.betaOverreachDetected, true);
+assert.equal(haltReview.driftRisk.haltRecommended, true);
+assert.equal(haltReview.nextTaskReady, false);
+
+console.log("drift-control validation passed");
+
+function createResultReport(
+  overrides: Partial<BetaResultReport>,
+): BetaResultReport {
+  return {
+    id: "test-beta-result-001",
+    taskPromptId: betaTask.id,
+    submittedAt: now,
+    filesChanged: [],
+    behaviorChanged: "No behavior changed.",
+    validationRun: [
+      {
+        command: "npm run test:drift-control",
+        result: overrides.validationResult ?? "passed",
+        outputSummary: "Deterministic drift-control validation.",
+      },
+    ],
+    validationResult: "passed",
+    deviationsFromPrompt: [],
+    risks: [],
+    nextStepRecommendation: "continue",
+    ...overrides,
+  };
+}
+
