@@ -6,6 +6,10 @@ import { createAlphaDevelopmentPlan } from "../src/alpha/planner.ts";
 import { recommendNextBetaTask } from "../src/alpha/next-task.ts";
 import { reviewBetaResult } from "../src/alpha/review.ts";
 import { createManualExecutionAdapter } from "../src/execution/adapter.ts";
+import {
+  runLocalFakeExecutor,
+  type FakeExecutionRequestPackage,
+} from "../src/execution/fake-executor.ts";
 import { evaluateExecutionReadiness } from "../src/execution/readiness.ts";
 import {
   EXECUTION_RESULT_PACKAGE_TYPE,
@@ -282,6 +286,90 @@ assert.equal(
     warning.includes("validation command suggestions"),
   ),
   true,
+);
+
+const fakeExecutionRequestPackage: FakeExecutionRequestPackage = {
+  packageType: "codemiister.executionRequest",
+  packageVersion: "1",
+  generatedAt: now,
+  adminIdea: {
+    id: alphaOutput.developmentPlan.ideaPromptId,
+    submittedAt: now,
+    goal: alphaOutput.developmentPlan.proposedApplicationGoal,
+  },
+  alphaPlanSummary: {
+    id: alphaOutput.developmentPlan.id,
+    summary: alphaOutput.developmentPlan.summary,
+    proposedApplicationGoal:
+      alphaOutput.developmentPlan.proposedApplicationGoal,
+    approvalRequired: alphaOutput.developmentPlan.approvalRequired,
+    driftControlsForBeta: alphaOutput.developmentPlan.driftControlsForBeta,
+  },
+  betaTask,
+  executionReadiness: safeReadiness,
+  validationSuggestions: betaTask.validationCommandSuggestions,
+  requiredResultReportFormat: betaTask.expectedResultReportFormat,
+  noExecutionStatement:
+    "No execution occurred. This package is for manual review/export only.",
+};
+const fakeExecutionResultPackage = runLocalFakeExecutor(
+  fakeExecutionRequestPackage,
+  { completedAt: now },
+);
+const fakeExecutionResultPackageValidation =
+  validateExecutionResultPackage(fakeExecutionResultPackage);
+
+assert.equal(fakeExecutionResultPackageValidation.valid, true);
+assert.deepEqual(fakeExecutionResultPackageValidation.errors, []);
+assert.equal(fakeExecutionResultPackage.executionStatus, "completed");
+assert.deepEqual(fakeExecutionResultPackage.betaResultReport.filesChanged, []);
+assert.equal(
+  fakeExecutionResultPackage.betaResultReport.validationResult,
+  "not_run",
+);
+assert.match(
+  fakeExecutionResultPackage.betaResultReport.behaviorChanged,
+  /simulated BETA completion/,
+);
+assert.match(
+  fakeExecutionResultPackage.noExternalValidationClaim,
+  /No Codex execution/,
+);
+assert.equal(
+  fakeExecutionResultPackage.betaResultReport.risks.some((risk) =>
+    risk.includes("simulated locally"),
+  ),
+  true,
+);
+
+const fakeExecutionReview = reviewBetaResult({
+  betaTaskPrompt: betaTask,
+  betaResultReport: fakeExecutionResultPackage.betaResultReport,
+  reviewedAt: now,
+});
+
+assert.equal(fakeExecutionReview.decision, "request_revision");
+assert.equal(fakeExecutionReview.statusAfterReview, "revision_required");
+
+const blockedFakeExecutionResultPackage = runLocalFakeExecutor(
+  {
+    ...fakeExecutionRequestPackage,
+    executionReadiness: broadReadiness,
+  },
+  { completedAt: now },
+);
+const blockedFakeExecutionResultPackageValidation =
+  validateExecutionResultPackage(blockedFakeExecutionResultPackage);
+
+assert.equal(blockedFakeExecutionResultPackageValidation.valid, true);
+assert.equal(blockedFakeExecutionResultPackage.executionStatus, "blocked");
+assert.equal(
+  blockedFakeExecutionResultPackage.betaResultReport.nextStepRecommendation,
+  "halt_for_admin",
+);
+assert.match(
+  blockedFakeExecutionResultPackage.betaResultReport.behaviorChanged,
+  /readiness had blockers/,
 );
 
 const validExecutionResultPackage: ExecutionResultPackage = {
