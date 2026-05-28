@@ -17,6 +17,12 @@ import {
   evaluateExecutionReadiness,
   type ExecutionReadinessReport,
 } from "../execution/readiness.ts";
+import {
+  EXECUTION_RESULT_PACKAGE_TYPE,
+  EXECUTION_RESULT_PACKAGE_VERSION,
+  validateExecutionResultPackage,
+  type ExecutionResultPackageValidation,
+} from "../execution/result-package.ts";
 
 const roles = [
   {
@@ -64,10 +70,38 @@ const exampleBetaResultJson = JSON.stringify(
   2,
 );
 
+const exampleExecutionResultPackageJson = JSON.stringify(
+  {
+    packageType: EXECUTION_RESULT_PACKAGE_TYPE,
+    packageVersion: EXECUTION_RESULT_PACKAGE_VERSION,
+    completedAt: "2026-05-28T00:00:00.000Z",
+    taskTitle: "Add a minimal project checklist domain model",
+    executionStatus: "completed",
+    noExternalValidationClaim:
+      "Validation results are BETA-reported and have not been independently verified by Codemiister.",
+    betaResultReport: {
+      filesChanged: ["src/domain/example.ts"],
+      behaviorChanged: "Added small domain helper",
+      validationRun: ["npm run typecheck"],
+      validationResult: "passed",
+      deviationsFromPrompt: [],
+      risks: [],
+      nextStepRecommendation: "continue",
+    },
+  },
+  null,
+  2,
+);
+
 interface BetaReviewState {
   report: BetaResultReport;
   review: AlphaReview;
   sourceJson: string;
+}
+
+interface ExecutionResultPackageValidationState {
+  validation: ExecutionResultPackageValidation;
+  noExternalValidationClaim: string;
 }
 
 export function App(): ReactElement {
@@ -81,6 +115,15 @@ export function App(): ReactElement {
   const [betaReviewState, setBetaReviewState] =
     useState<BetaReviewState | null>(null);
   const [betaReviewError, setBetaReviewError] = useState("");
+  const [executionResultPackageJson, setExecutionResultPackageJson] = useState(
+    exampleExecutionResultPackageJson,
+  );
+  const [
+    executionResultPackageValidationState,
+    setExecutionResultPackageValidationState,
+  ] = useState<ExecutionResultPackageValidationState | null>(null);
+  const [executionResultPackageError, setExecutionResultPackageError] =
+    useState("");
   const [copyStatus, setCopyStatus] = useState("");
   const [requestPackageCopyStatus, setRequestPackageCopyStatus] = useState("");
   const executionRequestPackageJson = buildExecutionRequestPackagePreview({
@@ -118,6 +161,8 @@ export function App(): ReactElement {
     setSubmittedIdea(ideaPrompt);
     setBetaReviewState(null);
     setBetaReviewError("");
+    setExecutionResultPackageValidationState(null);
+    setExecutionResultPackageError("");
     setCopyStatus("");
     setRequestPackageCopyStatus("");
     setPlannerOutput(
@@ -161,6 +206,34 @@ export function App(): ReactElement {
         reviewedAt,
       }),
       sourceJson: betaResultJson,
+    });
+  }
+
+  function handleExecutionResultPackageValidation(
+    event: FormEvent<HTMLFormElement>,
+  ): void {
+    event.preventDefault();
+
+    let parsed: unknown;
+
+    try {
+      parsed = JSON.parse(executionResultPackageJson);
+    } catch {
+      setExecutionResultPackageValidationState(null);
+      setExecutionResultPackageError(
+        "Invalid execution result package JSON. Provide one valid JSON object.",
+      );
+      return;
+    }
+
+    const validation = validateExecutionResultPackage(parsed);
+    setExecutionResultPackageError("");
+    setExecutionResultPackageValidationState({
+      validation,
+      noExternalValidationClaim: getStringField(
+        parsed,
+        "noExternalValidationClaim",
+      ),
     });
   }
 
@@ -288,6 +361,48 @@ export function App(): ReactElement {
         </div>
       </section>
 
+      <section
+        className="section-block"
+        aria-labelledby="execution-result-package-heading"
+      >
+        <div className="section-heading">
+          <p className="eyebrow">Manual result intake</p>
+          <h2 id="execution-result-package-heading">
+            Execution Result Package Validation
+          </h2>
+        </div>
+        <div className="review-workspace">
+          <form
+            className="review-form"
+            onSubmit={handleExecutionResultPackageValidation}
+          >
+            <label htmlFor="execution-result-package-json">
+              Execution result package JSON
+            </label>
+            <textarea
+              id="execution-result-package-json"
+              name="execution-result-package-json"
+              rows={12}
+              value={executionResultPackageJson}
+              onChange={(event) =>
+                setExecutionResultPackageJson(event.target.value)
+              }
+              placeholder={exampleExecutionResultPackageJson}
+            />
+            <p className="form-note">
+              Local validation only. This does not execute Codex or verify BETA
+              claims independently.
+            </p>
+            <button type="submit">Validate package</button>
+          </form>
+
+          <ExecutionResultPackageValidationPreview
+            error={executionResultPackageError}
+            validationState={executionResultPackageValidationState}
+          />
+        </div>
+      </section>
+
       <section className="section-block" aria-labelledby="review-heading">
         <div className="section-heading">
           <p className="eyebrow">Alpha review</p>
@@ -381,6 +496,79 @@ export function App(): ReactElement {
         </ul>
       </section>
     </main>
+  );
+}
+
+function ExecutionResultPackageValidationPreview({
+  error,
+  validationState,
+}: {
+  error: string;
+  validationState: ExecutionResultPackageValidationState | null;
+}): ReactElement {
+  if (error) {
+    return (
+      <div className="review-preview error-preview" role="alert">
+        <span className="preview-label">Local JSON error</span>
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  if (!validationState) {
+    return (
+      <div className="review-preview empty-preview">
+        <p>Paste an execution result package JSON to validate it locally.</p>
+      </div>
+    );
+  }
+
+  const { validation, noExternalValidationClaim } = validationState;
+
+  if (!validation.valid) {
+    return (
+      <div className="review-preview error-preview" role="alert">
+        <span className="preview-label">Validation errors</span>
+        <ListPreview values={validation.errors} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="review-preview">
+      <div className="preview-group compact-group">
+        <span className="preview-label">Package type</span>
+        <strong>{validation.summary.packageType}</strong>
+      </div>
+      <div className="preview-group">
+        <span className="preview-label">Task title</span>
+        <p>{validation.summary.taskTitle}</p>
+      </div>
+      <div className="preview-columns">
+        <div className="preview-group compact-group">
+          <span className="preview-label">Execution status</span>
+          <strong>{validation.summary.executionStatus}</strong>
+        </div>
+        <div className="preview-group compact-group">
+          <span className="preview-label">Validation result</span>
+          <strong>{validation.summary.validationResult}</strong>
+        </div>
+      </div>
+      <div className="preview-columns">
+        <div className="preview-group compact-group">
+          <span className="preview-label">Files changed count</span>
+          <strong>{String(validation.summary.filesChangedCount)}</strong>
+        </div>
+        <div className="preview-group compact-group">
+          <span className="preview-label">Risk count</span>
+          <strong>{String(validation.summary.riskCount)}</strong>
+        </div>
+      </div>
+      <div className="preview-group">
+        <span className="preview-label">No-external-validation claim</span>
+        <p>{noExternalValidationClaim}</p>
+      </div>
+    </div>
   );
 }
 
@@ -909,6 +1097,15 @@ function toText(value: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getStringField(value: unknown, key: string): string {
+  if (!isRecord(value)) {
+    return "";
+  }
+
+  const fieldValue = value[key];
+  return typeof fieldValue === "string" ? fieldValue : "";
 }
 
 function dedupeList(values: string[]): string[] {

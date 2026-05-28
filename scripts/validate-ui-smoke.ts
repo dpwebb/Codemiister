@@ -30,6 +30,11 @@ const requiredLabels = [
   "betaTask",
   "executionReadiness",
   "noExecutionStatement",
+  "Execution Result Package Validation",
+  "Execution result package JSON",
+  "Validate package",
+  "Validation errors",
+  "No-external-validation claim",
 ];
 
 for (const label of requiredLabels) {
