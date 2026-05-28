@@ -35,6 +35,9 @@ const requiredLabels = [
   "Validate package",
   "Validation errors",
   "No-external-validation claim",
+  "Use package result for Alpha review",
+  "BETA-reported",
+  "Package betaResultReport loaded into BETA Result JSON",
 ];
 
 for (const label of requiredLabels) {

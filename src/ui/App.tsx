@@ -102,6 +102,7 @@ interface BetaReviewState {
 interface ExecutionResultPackageValidationState {
   validation: ExecutionResultPackageValidation;
   noExternalValidationClaim: string;
+  betaResultReportJson: string;
 }
 
 export function App(): ReactElement {
@@ -124,6 +125,10 @@ export function App(): ReactElement {
   ] = useState<ExecutionResultPackageValidationState | null>(null);
   const [executionResultPackageError, setExecutionResultPackageError] =
     useState("");
+  const [
+    executionResultPackageUseStatus,
+    setExecutionResultPackageUseStatus,
+  ] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
   const [requestPackageCopyStatus, setRequestPackageCopyStatus] = useState("");
   const executionRequestPackageJson = buildExecutionRequestPackagePreview({
@@ -146,6 +151,9 @@ export function App(): ReactElement {
       setPlannerOutput(null);
       setBetaReviewState(null);
       setBetaReviewError("");
+      setExecutionResultPackageValidationState(null);
+      setExecutionResultPackageError("");
+      setExecutionResultPackageUseStatus("");
       setCopyStatus("");
       setRequestPackageCopyStatus("");
       return;
@@ -163,6 +171,7 @@ export function App(): ReactElement {
     setBetaReviewError("");
     setExecutionResultPackageValidationState(null);
     setExecutionResultPackageError("");
+    setExecutionResultPackageUseStatus("");
     setCopyStatus("");
     setRequestPackageCopyStatus("");
     setPlannerOutput(
@@ -178,23 +187,32 @@ export function App(): ReactElement {
   function handleBetaReview(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
 
+    reviewBetaResultJson({
+      reportJsonText: betaResultJson,
+      reviewedAt: new Date().toISOString(),
+    });
+  }
+
+  function reviewBetaResultJson(input: {
+    reportJsonText: string;
+    reviewedAt: string;
+  }): boolean {
     if (!plannerOutput) {
       setBetaReviewState(null);
       setBetaReviewError("Generate an Alpha plan before reviewing a BETA result.");
-      return;
+      return false;
     }
 
-    const reviewedAt = new Date().toISOString();
     const parseResult = parseBetaResultReport(
-      betaResultJson,
+      input.reportJsonText,
       plannerOutput.recommendedFirstBetaTask.id,
-      reviewedAt,
+      input.reviewedAt,
     );
 
     if (!parseResult.ok) {
       setBetaReviewState(null);
       setBetaReviewError(parseResult.error);
-      return;
+      return false;
     }
 
     setBetaReviewError("");
@@ -203,10 +221,12 @@ export function App(): ReactElement {
       review: reviewBetaResult({
         betaTaskPrompt: plannerOutput.recommendedFirstBetaTask,
         betaResultReport: parseResult.report,
-        reviewedAt,
+        reviewedAt: input.reviewedAt,
       }),
-      sourceJson: betaResultJson,
+      sourceJson: input.reportJsonText,
     });
+
+    return true;
   }
 
   function handleExecutionResultPackageValidation(
@@ -220,6 +240,7 @@ export function App(): ReactElement {
       parsed = JSON.parse(executionResultPackageJson);
     } catch {
       setExecutionResultPackageValidationState(null);
+      setExecutionResultPackageUseStatus("");
       setExecutionResultPackageError(
         "Invalid execution result package JSON. Provide one valid JSON object.",
       );
@@ -228,13 +249,42 @@ export function App(): ReactElement {
 
     const validation = validateExecutionResultPackage(parsed);
     setExecutionResultPackageError("");
+    setExecutionResultPackageUseStatus("");
     setExecutionResultPackageValidationState({
       validation,
       noExternalValidationClaim: getStringField(
         parsed,
         "noExternalValidationClaim",
       ),
+      betaResultReportJson: getJsonField(parsed, "betaResultReport"),
     });
+  }
+
+  function handleUseExecutionResultPackageForAlphaReview(): void {
+    if (
+      !executionResultPackageValidationState?.validation.valid ||
+      !executionResultPackageValidationState.betaResultReportJson
+    ) {
+      setExecutionResultPackageUseStatus(
+        "Only a valid execution result package with betaResultReport can populate Alpha review.",
+      );
+      return;
+    }
+
+    const reportJsonText =
+      executionResultPackageValidationState.betaResultReportJson;
+    setBetaResultJson(reportJsonText);
+
+    const reviewed = reviewBetaResultJson({
+      reportJsonText,
+      reviewedAt: new Date().toISOString(),
+    });
+
+    setExecutionResultPackageUseStatus(
+      reviewed
+        ? "Package betaResultReport loaded into BETA Result JSON and reviewed by ALPHA."
+        : "Package betaResultReport loaded into BETA Result JSON. Generate an Alpha plan before running ALPHA review.",
+    );
   }
 
   async function handleCopyTranscript(): Promise<void> {
@@ -384,9 +434,12 @@ export function App(): ReactElement {
               name="execution-result-package-json"
               rows={12}
               value={executionResultPackageJson}
-              onChange={(event) =>
-                setExecutionResultPackageJson(event.target.value)
-              }
+              onChange={(event) => {
+                setExecutionResultPackageJson(event.target.value);
+                setExecutionResultPackageValidationState(null);
+                setExecutionResultPackageError("");
+                setExecutionResultPackageUseStatus("");
+              }}
               placeholder={exampleExecutionResultPackageJson}
             />
             <p className="form-note">
@@ -399,6 +452,8 @@ export function App(): ReactElement {
           <ExecutionResultPackageValidationPreview
             error={executionResultPackageError}
             validationState={executionResultPackageValidationState}
+            useForReviewStatus={executionResultPackageUseStatus}
+            onUseForAlphaReview={handleUseExecutionResultPackageForAlphaReview}
           />
         </div>
       </section>
@@ -502,9 +557,13 @@ export function App(): ReactElement {
 function ExecutionResultPackageValidationPreview({
   error,
   validationState,
+  useForReviewStatus,
+  onUseForAlphaReview,
 }: {
   error: string;
   validationState: ExecutionResultPackageValidationState | null;
+  useForReviewStatus: string;
+  onUseForAlphaReview: () => void;
 }): ReactElement {
   if (error) {
     return (
@@ -568,6 +627,19 @@ function ExecutionResultPackageValidationPreview({
         <span className="preview-label">No-external-validation claim</span>
         <p>{noExternalValidationClaim}</p>
       </div>
+      <div className="package-actions">
+        <p>
+          This package result is BETA-reported. Validations are not
+          independently verified, and ALPHA review remains deterministic based
+          on the reported package content.
+        </p>
+        <button type="button" onClick={onUseForAlphaReview}>
+          Use package result for Alpha review
+        </button>
+      </div>
+      {useForReviewStatus ? (
+        <p className="copy-status">{useForReviewStatus}</p>
+      ) : null}
     </div>
   );
 }
@@ -1106,6 +1178,14 @@ function getStringField(value: unknown, key: string): string {
 
   const fieldValue = value[key];
   return typeof fieldValue === "string" ? fieldValue : "";
+}
+
+function getJsonField(value: unknown, key: string): string {
+  if (!isRecord(value) || !isRecord(value[key])) {
+    return "";
+  }
+
+  return `${JSON.stringify(value[key], null, 2)}\n`;
 }
 
 function dedupeList(values: string[]): string[] {
