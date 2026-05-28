@@ -11,6 +11,7 @@ import type {
   BetaResultReport,
   ValidationResultStatus,
   ValidationRun,
+  WorkflowStatus,
 } from "../domain/workflow.ts";
 
 const roles = [
@@ -62,6 +63,7 @@ const exampleBetaResultJson = JSON.stringify(
 interface BetaReviewState {
   report: BetaResultReport;
   review: AlphaReview;
+  sourceJson: string;
 }
 
 export function App(): ReactElement {
@@ -75,6 +77,13 @@ export function App(): ReactElement {
   const [betaReviewState, setBetaReviewState] =
     useState<BetaReviewState | null>(null);
   const [betaReviewError, setBetaReviewError] = useState("");
+  const [copyStatus, setCopyStatus] = useState("");
+  const transcript = buildTranscriptPreview({
+    submittedIdea,
+    plannerOutput,
+    betaResultJson,
+    betaReviewState,
+  });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -85,6 +94,7 @@ export function App(): ReactElement {
       setPlannerOutput(null);
       setBetaReviewState(null);
       setBetaReviewError("");
+      setCopyStatus("");
       return;
     }
 
@@ -98,6 +108,7 @@ export function App(): ReactElement {
     setSubmittedIdea(ideaPrompt);
     setBetaReviewState(null);
     setBetaReviewError("");
+    setCopyStatus("");
     setPlannerOutput(
       createAlphaDevelopmentPlan({
         ideaPrompt,
@@ -138,7 +149,22 @@ export function App(): ReactElement {
         betaResultReport: parseResult.report,
         reviewedAt,
       }),
+      sourceJson: betaResultJson,
     });
+  }
+
+  async function handleCopyTranscript(): Promise<void> {
+    try {
+      if (!navigator.clipboard?.writeText) {
+        setCopyStatus("Copy unavailable; select the transcript text below.");
+        return;
+      }
+
+      await navigator.clipboard.writeText(transcript);
+      setCopyStatus("Transcript copied.");
+    } catch {
+      setCopyStatus("Copy unavailable; select the transcript text below.");
+    }
   }
 
   return (
@@ -212,6 +238,27 @@ export function App(): ReactElement {
             error={betaReviewError}
             reviewState={betaReviewState}
           />
+        </div>
+      </section>
+
+      <section className="section-block" aria-labelledby="transcript-heading">
+        <div className="section-heading">
+          <p className="eyebrow">Transcript</p>
+          <h2 id="transcript-heading">Workflow transcript preview</h2>
+        </div>
+        <div className="transcript-panel">
+          <div className="transcript-actions">
+            <p>
+              Local preview only. Nothing is written to disk from the browser.
+            </p>
+            <button type="button" onClick={() => void handleCopyTranscript()}>
+              Copy transcript
+            </button>
+          </div>
+          {copyStatus ? <p className="copy-status">{copyStatus}</p> : null}
+          <pre className="transcript-preview">
+            <code>{transcript}</code>
+          </pre>
         </div>
       </section>
 
@@ -409,6 +456,175 @@ function ListPreview({ values }: { values: string[] }): ReactElement {
       ))}
     </ul>
   );
+}
+
+function buildTranscriptPreview(input: {
+  submittedIdea: AdminIdeaPrompt | null;
+  plannerOutput: AlphaPlannerOutput | null;
+  betaResultJson: string;
+  betaReviewState: BetaReviewState | null;
+}): string {
+  const lines: string[] = [];
+  const maybeBetaTask = input.plannerOutput?.recommendedFirstBetaTask;
+  const parsedBetaResult =
+    maybeBetaTask && input.betaResultJson.trim()
+      ? parseBetaResultReport(
+          input.betaResultJson,
+          maybeBetaTask.id,
+          "ui-transcript-preview",
+        )
+      : undefined;
+  const betaResult = parsedBetaResult?.ok ? parsedBetaResult.report : undefined;
+  const currentReview =
+    input.betaReviewState?.sourceJson === input.betaResultJson
+      ? input.betaReviewState.review
+      : undefined;
+
+  lines.push("# Codemiister Workflow Transcript Preview");
+  lines.push("");
+  addTranscriptValue(lines, "Generated at", "In-memory browser preview");
+  addTranscriptValue(
+    lines,
+    "Admin idea",
+    input.submittedIdea?.goal ?? "Not supplied",
+  );
+  lines.push("");
+
+  if (!input.plannerOutput || !input.submittedIdea) {
+    addTranscriptSection(lines, "ALPHA Development Plan");
+    addTranscriptValue(lines, "Status", "Not generated");
+    addTranscriptValue(
+      lines,
+      "Next step",
+      "Enter an Admin idea and generate the first Alpha plan.",
+    );
+    lines.push("");
+    addTranscriptValue(lines, "Final workflow status", "idea_received");
+    return `${lines.join("\n")}\n`;
+  }
+
+  const plan = input.plannerOutput.developmentPlan;
+  const betaTask = input.plannerOutput.recommendedFirstBetaTask;
+
+  addTranscriptSection(lines, "ALPHA Development Plan");
+  addTranscriptValue(
+    lines,
+    "Proposed application goal",
+    plan.proposedApplicationGoal,
+  );
+  addTranscriptValue(lines, "Summary", plan.summary);
+  addTranscriptList(
+    lines,
+    "Material Admin questions",
+    plan.questionsForAdmin?.map((question) => question.question) ?? [],
+  );
+  lines.push("");
+
+  addTranscriptSection(lines, "First BETA Task Prompt");
+  addTranscriptValue(lines, "Task title", betaTask.taskTitle);
+  addTranscriptValue(lines, "Exact goal", betaTask.exactGoal);
+  addTranscriptList(lines, "Allowed files/areas", betaTask.allowedFilesOrAreas);
+  addTranscriptList(lines, "Forbidden changes", betaTask.forbiddenChanges);
+  addTranscriptList(lines, "Acceptance checks", betaTask.acceptanceChecks);
+  lines.push("");
+
+  addTranscriptSection(lines, "BETA Result Report");
+  if (betaResult) {
+    addTranscriptList(lines, "Files changed", betaResult.filesChanged);
+    addTranscriptValue(lines, "Behavior changed", betaResult.behaviorChanged);
+    addTranscriptValue(lines, "Validation result", betaResult.validationResult);
+    addTranscriptList(
+      lines,
+      "Validation run",
+      betaResult.validationRun.map((item) => `${item.command}: ${item.result}`),
+    );
+    addTranscriptList(
+      lines,
+      "Deviations from prompt",
+      betaResult.deviationsFromPrompt,
+    );
+    addTranscriptList(lines, "Risks", betaResult.risks);
+    addTranscriptValue(
+      lines,
+      "Next-step recommendation",
+      betaResult.nextStepRecommendation,
+    );
+  } else if (parsedBetaResult && !parsedBetaResult.ok) {
+    addTranscriptValue(lines, "Status", parsedBetaResult.error);
+  } else {
+    addTranscriptValue(lines, "Status", "Not supplied");
+  }
+  lines.push("");
+
+  addTranscriptSection(lines, "ALPHA Review");
+  if (currentReview) {
+    addTranscriptValue(lines, "Decision", currentReview.decision);
+    addTranscriptValue(lines, "Drift risk", currentReview.driftRisk.level);
+    addTranscriptList(lines, "Drift reasons", currentReview.driftRisk.reasons);
+    addTranscriptList(lines, "Review findings", currentReview.reviewFindings);
+  } else {
+    addTranscriptValue(
+      lines,
+      "Decision",
+      betaResult
+        ? "Not run for current BETA result JSON"
+        : "Not available until BETA result review",
+    );
+    addTranscriptValue(lines, "Drift risk", "Not available");
+  }
+  lines.push("");
+
+  addTranscriptValue(
+    lines,
+    "Final workflow status",
+    getTranscriptStatus(input.plannerOutput, betaResult, currentReview),
+  );
+
+  return `${lines.join("\n")}\n`;
+}
+
+function getTranscriptStatus(
+  plannerOutput: AlphaPlannerOutput,
+  betaResult: BetaResultReport | undefined,
+  alphaReview: AlphaReview | undefined,
+): WorkflowStatus {
+  if (alphaReview) {
+    return alphaReview.statusAfterReview;
+  }
+
+  if (betaResult) {
+    return "beta_result_received";
+  }
+
+  return plannerOutput.status;
+}
+
+function addTranscriptSection(lines: string[], title: string): void {
+  lines.push(`## ${title}`);
+}
+
+function addTranscriptValue(
+  lines: string[],
+  label: string,
+  value: string,
+): void {
+  lines.push(`${label}: ${value || "None"}`);
+}
+
+function addTranscriptList(
+  lines: string[],
+  label: string,
+  values: string[],
+): void {
+  lines.push(`${label}:`);
+  if (values.length === 0) {
+    lines.push("- None");
+    return;
+  }
+
+  for (const value of values) {
+    lines.push(`- ${value}`);
+  }
 }
 
 function createIdeaId(idea: string): string {
