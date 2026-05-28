@@ -6,6 +6,7 @@ import { createAlphaDevelopmentPlan } from "../src/alpha/planner.ts";
 import { recommendNextBetaTask } from "../src/alpha/next-task.ts";
 import { reviewBetaResult } from "../src/alpha/review.ts";
 import { createManualExecutionAdapter } from "../src/execution/adapter.ts";
+import { evaluateExecutionReadiness } from "../src/execution/readiness.ts";
 import { runInMemoryAlphaBetaWorkflow } from "../src/workflow/runner.ts";
 import type { BetaResultReport } from "../src/domain/workflow.ts";
 
@@ -188,6 +189,91 @@ assert.equal(
 assert.equal(
   manualExecutionResult.manualInstructions.some((instruction) =>
     instruction.toLowerCase().includes("copy/paste"),
+  ),
+  true,
+);
+
+const safeReadiness = evaluateExecutionReadiness(betaTask);
+
+assert.equal(safeReadiness.ready, true);
+assert.deepEqual(safeReadiness.blockers, []);
+assert.equal(safeReadiness.normalizedAllowedAreas.length > 0, true);
+assert.equal(safeReadiness.normalizedForbiddenChanges.length > 0, true);
+
+const broadReadiness = evaluateExecutionReadiness({
+  ...betaTask,
+  id: "broad-beta-task",
+  exactGoal: "Build the whole app and implement everything.",
+  allowedFilesOrAreas: ["."],
+});
+
+assert.equal(broadReadiness.ready, false);
+assert.equal(
+  broadReadiness.blockers.some((blocker) =>
+    blocker.includes("overly broad"),
+  ),
+  true,
+);
+assert.equal(
+  broadReadiness.warnings.some((warning) =>
+    warning.includes("repository-level scope"),
+  ),
+  true,
+);
+
+const underspecifiedReadiness = evaluateExecutionReadiness({
+  ...betaTask,
+  id: "underspecified-beta-task",
+  exactGoal: " ",
+  allowedFilesOrAreas: [],
+  forbiddenChanges: [],
+  acceptanceChecks: [],
+});
+
+assert.equal(underspecifiedReadiness.ready, false);
+assert.equal(
+  underspecifiedReadiness.blockers.some((blocker) =>
+    blocker.includes("exact goal"),
+  ),
+  true,
+);
+assert.equal(
+  underspecifiedReadiness.blockers.some((blocker) =>
+    blocker.includes("allowed files"),
+  ),
+  true,
+);
+assert.equal(
+  underspecifiedReadiness.blockers.some((blocker) =>
+    blocker.includes("forbidden changes"),
+  ),
+  true,
+);
+
+const missingAcceptanceChecksReadiness = evaluateExecutionReadiness({
+  ...betaTask,
+  id: "missing-acceptance-checks-beta-task",
+  acceptanceChecks: [],
+});
+
+assert.equal(missingAcceptanceChecksReadiness.ready, false);
+assert.equal(
+  missingAcceptanceChecksReadiness.blockers.some((blocker) =>
+    blocker.includes("acceptance checks"),
+  ),
+  true,
+);
+
+const missingValidationReadiness = evaluateExecutionReadiness({
+  ...betaTask,
+  id: "missing-validation-beta-task",
+  validationCommandSuggestions: [],
+});
+
+assert.equal(missingValidationReadiness.ready, true);
+assert.equal(
+  missingValidationReadiness.warnings.some((warning) =>
+    warning.includes("validation command suggestions"),
   ),
   true,
 );

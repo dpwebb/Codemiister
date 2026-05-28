@@ -1,4 +1,8 @@
 import { createManualExecutionAdapter } from "../src/execution/adapter.ts";
+import {
+  evaluateExecutionReadiness,
+  type ExecutionReadinessReport,
+} from "../src/execution/readiness.ts";
 import { runInMemoryAlphaBetaWorkflow } from "../src/workflow/runner.ts";
 import type {
   BetaTaskPrompt,
@@ -35,6 +39,7 @@ if (!workflow.betaTask) {
 }
 
 const executionAdapter = createManualExecutionAdapter();
+const readiness = evaluateExecutionReadiness(workflow.betaTask);
 const executionResult = await executionAdapter.execute({
   id: `manual-execution-${workflow.betaTask.id}`,
   requestedAt: now,
@@ -46,15 +51,24 @@ const executionResult = await executionAdapter.execute({
   stopConditions: workflow.betaTask.stopConditions,
 });
 
-printManualExecutionPreview(workflow, workflow.betaTask);
+printManualExecutionPreview(workflow, workflow.betaTask, readiness);
 
 function printManualExecutionPreview(
   workflowLoop: AlphaBetaWorkflowLoop,
   betaTask: BetaTaskPrompt,
+  readinessReport: ExecutionReadinessReport,
 ): void {
   console.log("Automated Coder Manual BETA Execution Preview");
   console.log("");
   printValue("Admin idea", workflowLoop.ideaPrompt.goal);
+  printValue("Readiness", readinessReport.ready ? "ready" : "blocked");
+  printList("Readiness blockers", readinessReport.blockers);
+  printList("Readiness warnings", readinessReport.warnings);
+  printList("Normalized allowed areas", readinessReport.normalizedAllowedAreas);
+  printList(
+    "Normalized forbidden changes",
+    readinessReport.normalizedForbiddenChanges,
+  );
   printValue("Adapter", executionAdapter.name);
   printValue("Execution status", executionResult.status);
   printValue("BETA task title", betaTask.taskTitle);
@@ -74,6 +88,11 @@ function printValue(label: string, value: string): void {
 
 function printList(label: string, values: string[]): void {
   console.log(`${label}:`);
+  if (values.length === 0) {
+    console.log("- None");
+    return;
+  }
+
   for (const value of values) {
     console.log(`- ${value}`);
   }
