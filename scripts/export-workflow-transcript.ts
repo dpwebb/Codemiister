@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
 import type {
   AlphaBetaWorkflowLoop,
   AlphaReviewDecision,
@@ -8,8 +11,10 @@ import type {
 import { runInMemoryAlphaBetaWorkflow } from "../src/workflow/runner.ts";
 
 const args = process.argv.slice(2);
-const ideaText = args[0]?.trim();
-const reportJson = args.slice(1).join(" ").trim();
+const outputPath = getOutputPath(args);
+const contentArgs = removeOutputArgs(args);
+const ideaText = contentArgs[0]?.trim();
+const reportJson = contentArgs.slice(1).join(" ").trim();
 const now = "2026-05-28T00:00:00.000Z";
 
 if (!ideaText) {
@@ -43,13 +48,19 @@ const workflow = suppliedResult
       betaResultReport: suppliedResult,
     })
   : baseWorkflow;
+const transcript = buildTranscript(workflow, !suppliedResult);
 
-printTranscript(workflow, !suppliedResult);
+if (outputPath) {
+  writeTranscriptFile(outputPath, transcript);
+  console.log(`Workflow transcript written to ${outputPath}`);
+} else {
+  console.log(transcript);
+}
 
-function printTranscript(
+function buildTranscript(
   workflowLoop: AlphaBetaWorkflowLoop,
   betaResultIsMock: boolean,
-): void {
+): string {
   const plan = workflowLoop.developmentPlan;
   const betaTask = workflowLoop.betaTask;
   const betaResult = workflowLoop.betaResult;
@@ -60,52 +71,62 @@ function printTranscript(
     process.exit(1);
   }
 
-  console.log("# Automated Coder Workflow Transcript");
-  console.log("");
-  printValue("Generated at", now);
-  printValue("Admin idea", workflowLoop.ideaPrompt.goal);
-  console.log("");
+  const lines: string[] = [];
 
-  printSection("ALPHA Development Plan");
-  printValue("Proposed application goal", plan.proposedApplicationGoal);
-  printValue("Summary", plan.summary);
-  printList("Material Admin questions", plan.questionsForAdmin?.map((item) => item.question) ?? []);
-  console.log("");
+  lines.push("# Automated Coder Workflow Transcript");
+  lines.push("");
+  addValue(lines, "Generated at", now);
+  addValue(lines, "Admin idea", workflowLoop.ideaPrompt.goal);
+  lines.push("");
 
-  printSection("First BETA Task Prompt");
-  printValue("Task title", betaTask.taskTitle);
-  printValue("Exact goal", betaTask.exactGoal);
-  printList("Allowed files/areas", betaTask.allowedFilesOrAreas);
-  printList("Forbidden changes", betaTask.forbiddenChanges);
-  printList("Implementation steps", betaTask.implementationSteps);
-  printList("Acceptance checks", betaTask.acceptanceChecks);
-  printList("Validation commands", betaTask.validationCommandSuggestions);
-  console.log("");
+  addSection(lines, "ALPHA Development Plan");
+  addValue(lines, "Proposed application goal", plan.proposedApplicationGoal);
+  addValue(lines, "Summary", plan.summary);
+  addList(
+    lines,
+    "Material Admin questions",
+    plan.questionsForAdmin?.map((item) => item.question) ?? [],
+  );
+  lines.push("");
 
-  printSection(
+  addSection(lines, "First BETA Task Prompt");
+  addValue(lines, "Task title", betaTask.taskTitle);
+  addValue(lines, "Exact goal", betaTask.exactGoal);
+  addList(lines, "Allowed files/areas", betaTask.allowedFilesOrAreas);
+  addList(lines, "Forbidden changes", betaTask.forbiddenChanges);
+  addList(lines, "Implementation steps", betaTask.implementationSteps);
+  addList(lines, "Acceptance checks", betaTask.acceptanceChecks);
+  addList(lines, "Validation commands", betaTask.validationCommandSuggestions);
+  lines.push("");
+
+  addSection(
+    lines,
     betaResultIsMock
       ? "BETA Result Report (MOCK / IN-MEMORY ONLY)"
       : "BETA Result Report",
   );
-  printList("Files changed", betaResult.filesChanged);
-  printValue("Behavior changed", betaResult.behaviorChanged);
-  printList(
+  addList(lines, "Files changed", betaResult.filesChanged);
+  addValue(lines, "Behavior changed", betaResult.behaviorChanged);
+  addList(
+    lines,
     "Validation run",
     betaResult.validationRun.map((item) => `${item.command}: ${item.result}`),
   );
-  printValue("Validation result", betaResult.validationResult);
-  printList("Deviations from prompt", betaResult.deviationsFromPrompt);
-  printList("Risks", betaResult.risks);
-  printValue("Next-step recommendation", betaResult.nextStepRecommendation);
-  console.log("");
+  addValue(lines, "Validation result", betaResult.validationResult);
+  addList(lines, "Deviations from prompt", betaResult.deviationsFromPrompt);
+  addList(lines, "Risks", betaResult.risks);
+  addValue(lines, "Next-step recommendation", betaResult.nextStepRecommendation);
+  lines.push("");
 
-  printSection("ALPHA Review");
-  printValue("Decision", alphaReview.decision);
-  printValue("Drift risk", alphaReview.driftRisk.level);
-  printList("Drift reasons", alphaReview.driftRisk.reasons);
-  printList("Review findings", alphaReview.reviewFindings);
-  printValue("Final workflow status", workflowLoop.status);
-  printValue("Next recommended action", getNextAction(alphaReview.decision));
+  addSection(lines, "ALPHA Review");
+  addValue(lines, "Decision", alphaReview.decision);
+  addValue(lines, "Drift risk", alphaReview.driftRisk.level);
+  addList(lines, "Drift reasons", alphaReview.driftRisk.reasons);
+  addList(lines, "Review findings", alphaReview.reviewFindings);
+  addValue(lines, "Final workflow status", workflowLoop.status);
+  addValue(lines, "Next recommended action", getNextAction(alphaReview.decision));
+
+  return `${lines.join("\n")}\n`;
 }
 
 function parseBetaResultReport(
@@ -221,27 +242,83 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function printUsage(): void {
   console.error(
-    "Usage: npm run workflow:transcript -- \"Create a simple project checklist app\" '{\"filesChanged\":[\"src/domain/example.ts\"],\"behaviorChanged\":[\"Added small domain helper\"],\"validationRun\":[\"npm run typecheck\"],\"validationResult\":\"passed\",\"deviationsFromPrompt\":[],\"risks\":[],\"nextStepRecommendation\":\"continue\"}'",
+    "Usage: npm run workflow:transcript -- \"Create a simple project checklist app\" '{\"filesChanged\":[\"src/domain/example.ts\"],\"behaviorChanged\":[\"Added small domain helper\"],\"validationRun\":[\"npm run typecheck\"],\"validationResult\":\"passed\",\"deviationsFromPrompt\":[],\"risks\":[],\"nextStepRecommendation\":\"continue\"}' --out transcripts/checklist-app.md",
   );
 }
 
-function printSection(title: string): void {
-  console.log(`## ${title}`);
+function getOutputPath(inputArgs: string[]): string | undefined {
+  const outIndex = inputArgs.indexOf("--out");
+  if (outIndex !== -1) {
+    const requestedPath = inputArgs[outIndex + 1]?.trim();
+    if (!requestedPath) {
+      console.error("Missing output path after --out.");
+      process.exit(1);
+    }
+
+    assertSafeOutputPath(requestedPath);
+    return requestedPath;
+  }
+
+  const lastArg = inputArgs.at(-1)?.trim();
+  if (lastArg?.toLowerCase().endsWith(".md")) {
+    assertSafeOutputPath(lastArg);
+    return lastArg;
+  }
+
+  return undefined;
 }
 
-function printValue(label: string, value: string): void {
-  console.log(`${label}: ${value}`);
+function assertSafeOutputPath(requestedPath: string): void {
+  if (path.isAbsolute(requestedPath) || requestedPath.includes("..")) {
+    console.error("--out must be a local relative path and must not contain '..'.");
+    process.exit(1);
+  }
 }
 
-function printList(label: string, values: string[]): void {
-  console.log(`${label}:`);
+function removeOutputArgs(inputArgs: string[]): string[] {
+  const outIndex = inputArgs.indexOf("--out");
+  if (outIndex !== -1) {
+    return [
+      ...inputArgs.slice(0, outIndex),
+      ...inputArgs.slice(outIndex + 2),
+    ];
+  }
+
+  const lastArg = inputArgs.at(-1)?.trim();
+  if (lastArg?.toLowerCase().endsWith(".md")) {
+    return inputArgs.slice(0, -1);
+  }
+
+  return inputArgs;
+}
+
+function writeTranscriptFile(requestedPath: string, transcript: string): void {
+  const parentDirectory = path.dirname(requestedPath);
+
+  if (parentDirectory && parentDirectory !== ".") {
+    mkdirSync(parentDirectory, { recursive: true });
+  }
+
+  writeFileSync(requestedPath, transcript, "utf8");
+}
+
+function addSection(lines: string[], title: string): void {
+  lines.push(`## ${title}`);
+}
+
+function addValue(lines: string[], label: string, value: string): void {
+  lines.push(`${label}: ${value}`);
+}
+
+function addList(lines: string[], label: string, values: string[]): void {
+  lines.push(`${label}:`);
   if (values.length === 0) {
-    console.log("- None");
+    lines.push("- None");
     return;
   }
 
   for (const value of values) {
-    console.log(`- ${value}`);
+    lines.push(`- ${value}`);
   }
 }
 
@@ -254,4 +331,3 @@ function createIdeaId(ideaTextValue: string): string {
 
   return `admin-idea-${slug || "untitled"}`;
 }
-
