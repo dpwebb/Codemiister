@@ -132,6 +132,107 @@ h3 {
   padding-bottom: 12px;
 }
 
+.idea-workspace {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.idea-form,
+.plan-preview {
+  border: 1px solid #d9dde3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.idea-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+
+.idea-form label,
+.preview-label {
+  color: #3d464f;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.idea-form textarea {
+  width: 100%;
+  min-height: 148px;
+  resize: vertical;
+  border: 1px solid #bfc7d1;
+  border-radius: 8px;
+  padding: 12px;
+  color: #1d1f23;
+  background: #fbfcfd;
+}
+
+.idea-form textarea:focus {
+  border-color: #1f6f5b;
+  outline: 3px solid #d8ece5;
+}
+
+.idea-form button {
+  align-self: start;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #1f6f5b;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.idea-form button:hover {
+  background: #185947;
+}
+
+.plan-preview {
+  display: grid;
+  gap: 14px;
+  min-height: 242px;
+  padding: 18px;
+}
+
+.empty-preview {
+  align-content: center;
+  color: #5d6670;
+}
+
+.empty-preview p,
+.preview-group p,
+.compact-group strong {
+  margin-bottom: 0;
+}
+
+.preview-group {
+  display: grid;
+  gap: 6px;
+}
+
+.compact-group strong {
+  color: #1f6f5b;
+}
+
+.preview-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.preview-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  color: #4d535c;
+}
+
 .role-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -203,6 +304,8 @@ h3 {
 
 @media (max-width: 860px) {
   .shell-header,
+  .idea-workspace,
+  .preview-columns,
   .role-grid,
   .workflow-list {
     grid-template-columns: 1fr;
