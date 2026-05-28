@@ -1,3 +1,4 @@
+import { recommendNextBetaTask } from "../src/alpha/next-task.ts";
 import { reviewBetaResult } from "../src/alpha/review.ts";
 import type {
   AlphaReviewDecision,
@@ -28,8 +29,8 @@ const workflow = runInMemoryAlphaBetaWorkflow({
   now,
 });
 
-if (!workflow.betaTask) {
-  console.error("Workflow did not return a BETA task prompt.");
+if (!workflow.developmentPlan || !workflow.betaTask) {
+  console.error("Workflow did not return the required Alpha plan and BETA task.");
   process.exit(1);
 }
 
@@ -38,6 +39,13 @@ const alphaReview = reviewBetaResult({
   betaTaskPrompt: workflow.betaTask,
   betaResultReport,
   reviewedAt: now,
+});
+const nextRecommendation = recommendNextBetaTask({
+  plan: workflow.developmentPlan,
+  previousBetaTask: workflow.betaTask,
+  betaResultReport,
+  alphaReview,
+  issuedAt: now,
 });
 
 console.log("Automated Coder BETA Result Review");
@@ -52,6 +60,15 @@ printValue("Drift risk level", alphaReview.driftRisk.level);
 printList("Review findings", alphaReview.reviewFindings);
 printList("Drift reasons", alphaReview.driftRisk.reasons);
 printValue("Final status", alphaReview.statusAfterReview);
+printValue("Recommended next action", nextRecommendation.adminMessage);
+if (nextRecommendation.nextTask) {
+  printValue("Recommended next BETA task", nextRecommendation.nextTask.taskTitle);
+  printValue("Recommended next exact goal", nextRecommendation.nextTask.exactGoal);
+  printList(
+    "Recommended next allowed areas",
+    nextRecommendation.nextTask.allowedFilesOrAreas,
+  );
+}
 
 function parseBetaResultReport(
   reportJsonText: string,
@@ -67,7 +84,9 @@ function parseBetaResultReport(
   }
 
   if (!isRecord(parsed)) {
-    console.error("Invalid BETA result JSON. The top-level value must be an object.");
+    console.error(
+      "Invalid BETA result JSON. The top-level value must be an object.",
+    );
     process.exit(1);
   }
 
@@ -103,7 +122,9 @@ function toValidationRunArray(value: unknown): ValidationRun[] {
         command: toText(item.command),
         result: toValidationResult(item.result),
         outputSummary:
-          typeof item.outputSummary === "string" ? item.outputSummary : undefined,
+          typeof item.outputSummary === "string"
+            ? item.outputSummary
+            : undefined,
       };
     }
 

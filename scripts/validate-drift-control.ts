@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { createAlphaDevelopmentPlan } from "../src/alpha/planner.ts";
+import { recommendNextBetaTask } from "../src/alpha/next-task.ts";
 import { reviewBetaResult } from "../src/alpha/review.ts";
 import { runInMemoryAlphaBetaWorkflow } from "../src/workflow/runner.ts";
 import type { BetaResultReport } from "../src/domain/workflow.ts";
@@ -44,14 +45,15 @@ assert.equal(
   true,
 );
 
+const continueResultReport = createResultReport({
+  filesChanged: ["src/domain/workflow.ts"],
+  behaviorChanged: "Updated the workflow domain contract within scope.",
+  validationResult: "passed",
+  nextStepRecommendation: "continue",
+});
 const continueReview = reviewBetaResult({
   betaTaskPrompt: betaTask,
-  betaResultReport: createResultReport({
-    filesChanged: ["src/domain/workflow.ts"],
-    behaviorChanged: "Updated the workflow domain contract within scope.",
-    validationResult: "passed",
-    nextStepRecommendation: "continue",
-  }),
+  betaResultReport: continueResultReport,
   reviewedAt: now,
 });
 
@@ -60,15 +62,16 @@ assert.equal(continueReview.statusAfterReview, "next_task_ready");
 assert.equal(continueReview.driftRisk.level, "low");
 assert.equal(continueReview.nextTaskReady, true);
 
+const revisionResultReport = createResultReport({
+  filesChanged: ["src/domain/workflow.ts"],
+  behaviorChanged: "Updated the workflow domain contract within scope.",
+  validationResult: "failed",
+  deviationsFromPrompt: ["Validation failed and needs a bounded correction."],
+  nextStepRecommendation: "request_revision",
+});
 const revisionReview = reviewBetaResult({
   betaTaskPrompt: betaTask,
-  betaResultReport: createResultReport({
-    filesChanged: ["src/domain/workflow.ts"],
-    behaviorChanged: "Updated the workflow domain contract within scope.",
-    validationResult: "failed",
-    deviationsFromPrompt: ["Validation failed and needs a bounded correction."],
-    nextStepRecommendation: "request_revision",
-  }),
+  betaResultReport: revisionResultReport,
   reviewedAt: now,
 });
 
@@ -77,17 +80,18 @@ assert.equal(revisionReview.statusAfterReview, "revision_required");
 assert.equal(revisionReview.driftRisk.level, "medium");
 assert.equal(revisionReview.nextTaskReady, false);
 
+const haltResultReport = createResultReport({
+  filesChanged: ["package.json", "src/domain/workflow.ts"],
+  behaviorChanged:
+    "Added database persistence outside the allowed task scope.",
+  deviationsFromPrompt: ["Changed package.json outside allowed areas."],
+  risks: ["Database persistence is a forbidden change for this task."],
+  validationResult: "passed",
+  nextStepRecommendation: "continue",
+});
 const haltReview = reviewBetaResult({
   betaTaskPrompt: betaTask,
-  betaResultReport: createResultReport({
-    filesChanged: ["package.json", "src/domain/workflow.ts"],
-    behaviorChanged:
-      "Added database persistence outside the allowed task scope.",
-    deviationsFromPrompt: ["Changed package.json outside allowed areas."],
-    risks: ["Database persistence is a forbidden change for this task."],
-    validationResult: "passed",
-    nextStepRecommendation: "continue",
-  }),
+  betaResultReport: haltResultReport,
   reviewedAt: now,
 });
 
@@ -101,6 +105,59 @@ assert.equal(
 assert.equal(haltReview.driftRisk.betaOverreachDetected, true);
 assert.equal(haltReview.driftRisk.haltRecommended, true);
 assert.equal(haltReview.nextTaskReady, false);
+
+const continueRecommendation = recommendNextBetaTask({
+  plan: alphaOutput.developmentPlan,
+  previousBetaTask: betaTask,
+  betaResultReport: continueResultReport,
+  alphaReview: continueReview,
+  issuedAt: now,
+});
+
+assert.equal(continueRecommendation.kind, "next_task_ready");
+assert.ok(continueRecommendation.nextTask);
+assert.match(
+  continueRecommendation.nextTask.taskTitle,
+  /Manual next-step BETA recommendation/,
+);
+assert.match(continueRecommendation.nextTask.exactGoal, /Do not invent/);
+
+const revisionRecommendation = recommendNextBetaTask({
+  plan: alphaOutput.developmentPlan,
+  previousBetaTask: betaTask,
+  betaResultReport: revisionResultReport,
+  alphaReview: revisionReview,
+  issuedAt: now,
+});
+
+assert.equal(revisionRecommendation.kind, "revision_required");
+assert.ok(revisionRecommendation.nextTask);
+assert.deepEqual(
+  revisionRecommendation.nextTask.allowedFilesOrAreas,
+  betaTask.allowedFilesOrAreas,
+);
+assert.match(
+  revisionRecommendation.nextTask.exactGoal,
+  /Validation failed and needs a bounded correction/,
+);
+assert.equal(
+  revisionRecommendation.nextTask.forbiddenChanges.some((change) =>
+    change.toLowerCase().includes("architecture"),
+  ),
+  true,
+);
+
+const haltRecommendation = recommendNextBetaTask({
+  plan: alphaOutput.developmentPlan,
+  previousBetaTask: betaTask,
+  betaResultReport: haltResultReport,
+  alphaReview: haltReview,
+  issuedAt: now,
+});
+
+assert.equal(haltRecommendation.kind, "halt_for_admin");
+assert.equal(haltRecommendation.nextTask, undefined);
+assert.match(haltRecommendation.adminMessage, /ADMIN must review/);
 
 const runnerContinue = runInMemoryAlphaBetaWorkflow({
   ideaPrompt: {
