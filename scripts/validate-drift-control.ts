@@ -7,6 +7,12 @@ import { recommendNextBetaTask } from "../src/alpha/next-task.ts";
 import { reviewBetaResult } from "../src/alpha/review.ts";
 import { createManualExecutionAdapter } from "../src/execution/adapter.ts";
 import { evaluateExecutionReadiness } from "../src/execution/readiness.ts";
+import {
+  EXECUTION_RESULT_PACKAGE_TYPE,
+  EXECUTION_RESULT_PACKAGE_VERSION,
+  validateExecutionResultPackage,
+  type ExecutionResultPackage,
+} from "../src/execution/result-package.ts";
 import { runInMemoryAlphaBetaWorkflow } from "../src/workflow/runner.ts";
 import type { BetaResultReport } from "../src/domain/workflow.ts";
 
@@ -274,6 +280,69 @@ assert.equal(missingValidationReadiness.ready, true);
 assert.equal(
   missingValidationReadiness.warnings.some((warning) =>
     warning.includes("validation command suggestions"),
+  ),
+  true,
+);
+
+const validExecutionResultPackage: ExecutionResultPackage = {
+  packageType: EXECUTION_RESULT_PACKAGE_TYPE,
+  packageVersion: EXECUTION_RESULT_PACKAGE_VERSION,
+  completedAt: now,
+  requestPackageType: "codemiister.executionRequest",
+  requestPackageVersion: "1",
+  taskTitle: betaTask.taskTitle,
+  betaResultReport: continueResultReport,
+  executionStatus: "completed",
+  noExternalValidationClaim:
+    "Validation results are reported by BETA and are not independently verified by this package.",
+};
+const validExecutionResultPackageValidation =
+  validateExecutionResultPackage(validExecutionResultPackage);
+
+assert.equal(validExecutionResultPackageValidation.valid, true);
+assert.deepEqual(validExecutionResultPackageValidation.errors, []);
+assert.equal(
+  validExecutionResultPackageValidation.summary.packageType,
+  EXECUTION_RESULT_PACKAGE_TYPE,
+);
+assert.equal(
+  validExecutionResultPackageValidation.summary.validationResult,
+  "passed",
+);
+assert.equal(
+  validExecutionResultPackageValidation.summary.filesChangedCount,
+  1,
+);
+
+const missingBetaResultFieldsValidation = validateExecutionResultPackage({
+  ...validExecutionResultPackage,
+  betaResultReport: {
+    id: "incomplete-beta-result",
+  },
+});
+
+assert.equal(missingBetaResultFieldsValidation.valid, false);
+assert.equal(
+  missingBetaResultFieldsValidation.errors.some((error) =>
+    error.includes("filesChanged"),
+  ),
+  true,
+);
+assert.equal(
+  missingBetaResultFieldsValidation.errors.some((error) =>
+    error.includes("behaviorChanged"),
+  ),
+  true,
+);
+assert.equal(
+  missingBetaResultFieldsValidation.errors.some((error) =>
+    error.includes("validationRun"),
+  ),
+  true,
+);
+assert.equal(
+  missingBetaResultFieldsValidation.errors.some((error) =>
+    error.includes("nextStepRecommendation"),
   ),
   true,
 );
