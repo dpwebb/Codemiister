@@ -82,6 +82,11 @@ export function App(): ReactElement {
     useState<BetaReviewState | null>(null);
   const [betaReviewError, setBetaReviewError] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
+  const [requestPackageCopyStatus, setRequestPackageCopyStatus] = useState("");
+  const executionRequestPackageJson = buildExecutionRequestPackagePreview({
+    submittedIdea,
+    plannerOutput,
+  });
   const transcript = buildTranscriptPreview({
     submittedIdea,
     plannerOutput,
@@ -99,6 +104,7 @@ export function App(): ReactElement {
       setBetaReviewState(null);
       setBetaReviewError("");
       setCopyStatus("");
+      setRequestPackageCopyStatus("");
       return;
     }
 
@@ -113,6 +119,7 @@ export function App(): ReactElement {
     setBetaReviewState(null);
     setBetaReviewError("");
     setCopyStatus("");
+    setRequestPackageCopyStatus("");
     setPlannerOutput(
       createAlphaDevelopmentPlan({
         ideaPrompt,
@@ -171,6 +178,31 @@ export function App(): ReactElement {
     }
   }
 
+  async function handleCopyRequestPackage(): Promise<void> {
+    if (!executionRequestPackageJson) {
+      setRequestPackageCopyStatus(
+        "Generate an Alpha plan before copying the request package.",
+      );
+      return;
+    }
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        setRequestPackageCopyStatus(
+          "Copy unavailable; select the request package text below.",
+        );
+        return;
+      }
+
+      await navigator.clipboard.writeText(executionRequestPackageJson);
+      setRequestPackageCopyStatus("Execution request package copied.");
+    } catch {
+      setRequestPackageCopyStatus(
+        "Copy unavailable; select the request package text below.",
+      );
+    }
+  }
+
   return (
     <main className="app-shell">
       <header className="shell-header">
@@ -212,6 +244,47 @@ export function App(): ReactElement {
             plannerOutput={plannerOutput}
             submittedIdea={submittedIdea}
           />
+        </div>
+      </section>
+
+      <section
+        className="section-block"
+        aria-labelledby="execution-request-heading"
+      >
+        <div className="section-heading">
+          <p className="eyebrow">Manual handoff</p>
+          <h2 id="execution-request-heading">Execution Request Package</h2>
+        </div>
+        <div className="package-panel">
+          {executionRequestPackageJson ? (
+            <>
+              <div className="package-actions">
+                <p>
+                  Local preview only. No execution occurs and no browser file is
+                  written.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void handleCopyRequestPackage()}
+                >
+                  Copy request package
+                </button>
+              </div>
+              {requestPackageCopyStatus ? (
+                <p className="copy-status">{requestPackageCopyStatus}</p>
+              ) : null}
+              <pre className="package-preview">
+                <code>{executionRequestPackageJson}</code>
+              </pre>
+            </>
+          ) : (
+            <div className="empty-preview package-empty-preview">
+              <p>
+                Generate an Admin idea to preview the local execution request
+                package for manual handoff.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -513,6 +586,39 @@ function ListPreview({ values }: { values: string[] }): ReactElement {
       ))}
     </ul>
   );
+}
+
+function buildExecutionRequestPackagePreview(input: {
+  submittedIdea: AdminIdeaPrompt | null;
+  plannerOutput: AlphaPlannerOutput | null;
+}): string {
+  if (!input.submittedIdea || !input.plannerOutput) {
+    return "";
+  }
+
+  const plan = input.plannerOutput.developmentPlan;
+  const betaTask = input.plannerOutput.recommendedFirstBetaTask;
+  const executionRequestPackage = {
+    packageType: "codemiister.executionRequest",
+    packageVersion: "1",
+    generatedAt: input.submittedIdea.submittedAt,
+    adminIdea: input.submittedIdea,
+    alphaPlanSummary: {
+      id: plan.id,
+      summary: plan.summary,
+      proposedApplicationGoal: plan.proposedApplicationGoal,
+      approvalRequired: plan.approvalRequired,
+      driftControlsForBeta: plan.driftControlsForBeta,
+    },
+    betaTask,
+    executionReadiness: evaluateExecutionReadiness(betaTask),
+    validationSuggestions: betaTask.validationCommandSuggestions,
+    requiredResultReportFormat: betaTask.expectedResultReportFormat,
+    noExecutionStatement:
+      "No execution occurred. This package is for manual review/export only.",
+  };
+
+  return `${JSON.stringify(executionRequestPackage, null, 2)}\n`;
 }
 
 function buildTranscriptPreview(input: {

@@ -24,6 +24,12 @@ const requiredLabels = [
   "Warnings",
   "Normalized allowed areas",
   "Normalized forbidden changes",
+  "Execution Request Package",
+  "Copy request package",
+  "packageType",
+  "betaTask",
+  "executionReadiness",
+  "noExecutionStatement",
 ];
 
 for (const label of requiredLabels) {
