@@ -13,6 +13,10 @@ import type {
   ValidationRun,
   WorkflowStatus,
 } from "../domain/workflow.ts";
+import {
+  evaluateExecutionReadiness,
+  type ExecutionReadinessReport,
+} from "../execution/readiness.ts";
 
 const roles = [
   {
@@ -392,11 +396,15 @@ function AlphaPlanPreview({
     return (
       <div className="plan-preview empty-preview">
         <p>Enter an Admin idea to preview the deterministic Alpha plan.</p>
+        <ExecutionReadinessPreview readiness={null} />
       </div>
     );
   }
 
   const { developmentPlan, recommendedFirstBetaTask, status } = plannerOutput;
+  const executionReadiness = evaluateExecutionReadiness(
+    recommendedFirstBetaTask,
+  );
 
   return (
     <div className="plan-preview">
@@ -443,6 +451,55 @@ function AlphaPlanPreview({
       <div className="preview-group">
         <span className="preview-label">Acceptance checks</span>
         <ListPreview values={recommendedFirstBetaTask.acceptanceChecks} />
+      </div>
+      <ExecutionReadinessPreview readiness={executionReadiness} />
+    </div>
+  );
+}
+
+function ExecutionReadinessPreview({
+  readiness,
+}: {
+  readiness: ExecutionReadinessReport | null;
+}): ReactElement {
+  if (!readiness) {
+    return (
+      <div className="readiness-panel neutral-readiness">
+        <span className="preview-label">Execution readiness</span>
+        <p>Generate an Alpha plan to evaluate the first BETA task readiness.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="readiness-panel">
+      <div className="preview-group compact-group">
+        <span className="preview-label">Readiness status</span>
+        <strong>{readiness.ready ? "ready" : "blocked"}</strong>
+      </div>
+      <div className="preview-columns">
+        <div className="preview-group">
+          <span className="preview-label">Blockers</span>
+          <ListPreview
+            values={readiness.blockers.length ? readiness.blockers : ["None"]}
+          />
+        </div>
+        <div className="preview-group">
+          <span className="preview-label">Warnings</span>
+          <ListPreview
+            values={readiness.warnings.length ? readiness.warnings : ["None"]}
+          />
+        </div>
+      </div>
+      <div className="preview-columns">
+        <div className="preview-group">
+          <span className="preview-label">Normalized allowed areas</span>
+          <ListPreview values={readiness.normalizedAllowedAreas} />
+        </div>
+        <div className="preview-group">
+          <span className="preview-label">Normalized forbidden changes</span>
+          <ListPreview values={readiness.normalizedForbiddenChanges} />
+        </div>
       </div>
     </div>
   );

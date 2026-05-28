@@ -281,6 +281,21 @@ h3 {
   color: #4d535c;
 }
 
+.readiness-panel {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid #d9dde3;
+  padding-top: 14px;
+}
+
+.neutral-readiness {
+  color: #5d6670;
+}
+
+.neutral-readiness p {
+  margin-bottom: 0;
+}
+
 .transcript-panel {
   display: grid;
   gap: 12px;

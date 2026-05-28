@@ -18,6 +18,12 @@ const requiredLabels = [
   "Alpha Review",
   "Transcript",
   "Deferred capabilities",
+  "Execution readiness",
+  "Readiness status",
+  "Blockers",
+  "Warnings",
+  "Normalized allowed areas",
+  "Normalized forbidden changes",
 ];
 
 for (const label of requiredLabels) {
