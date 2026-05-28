@@ -8,6 +8,7 @@
     "beta:task": "node scripts/export-beta-task.ts",
     "demo": "node scripts/demo-alpha-beta-loop.ts",
     "demo:drift": "node scripts/demo-alpha-beta-loop.ts --drift",
+    "project:context": "node scripts/project-context.ts",
     "test": "npm run test:drift-control",
     "test:drift-control": "node scripts/validate-drift-control.ts",
     "typecheck": "tsc --noEmit",
