@@ -12,6 +12,7 @@
     "dev": "vite",
     "build": "vite build",
     "execution:request": "node scripts/export-execution-request.ts",
+    "execution:validate": "node scripts/validate-execution-request.ts",
     "project:context": "node scripts/project-context.ts",
     "test": "npm run test:drift-control && npm run test:ui-smoke",
     "test:drift-control": "node scripts/validate-drift-control.ts",
