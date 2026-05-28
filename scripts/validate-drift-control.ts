@@ -5,6 +5,7 @@ import path from "node:path";
 import { createAlphaDevelopmentPlan } from "../src/alpha/planner.ts";
 import { recommendNextBetaTask } from "../src/alpha/next-task.ts";
 import { reviewBetaResult } from "../src/alpha/review.ts";
+import { createManualExecutionAdapter } from "../src/execution/adapter.ts";
 import { runInMemoryAlphaBetaWorkflow } from "../src/workflow/runner.ts";
 import type { BetaResultReport } from "../src/domain/workflow.ts";
 
@@ -158,6 +159,38 @@ const haltRecommendation = recommendNextBetaTask({
 assert.equal(haltRecommendation.kind, "halt_for_admin");
 assert.equal(haltRecommendation.nextTask, undefined);
 assert.match(haltRecommendation.adminMessage, /ADMIN must review/);
+
+const manualExecutionAdapter = createManualExecutionAdapter();
+const manualExecutionResult = await manualExecutionAdapter.execute({
+  id: "manual-execution-request-001",
+  requestedAt: now,
+  mode: "manual",
+  taskPrompt: betaTask,
+  allowedFilesOrAreas: betaTask.allowedFilesOrAreas,
+  forbiddenChanges: betaTask.forbiddenChanges,
+  validationCommandSuggestions: betaTask.validationCommandSuggestions,
+  stopConditions: betaTask.stopConditions,
+  timeoutMs: 0,
+});
+
+assert.equal(manualExecutionAdapter.name, "manual");
+assert.deepEqual(manualExecutionAdapter.supportedModes, ["manual", "dry_run"]);
+assert.equal(manualExecutionResult.executed, false);
+assert.equal(manualExecutionResult.status, "manual_action_required");
+assert.match(manualExecutionResult.message, /did not execute anything/);
+assert.equal(manualExecutionResult.betaResultReport.taskPromptId, betaTask.id);
+assert.deepEqual(manualExecutionResult.betaResultReport.filesChanged, []);
+assert.equal(manualExecutionResult.betaResultReport.validationResult, "not_run");
+assert.equal(
+  manualExecutionResult.betaResultReport.nextStepRecommendation,
+  "halt_for_admin",
+);
+assert.equal(
+  manualExecutionResult.manualInstructions.some((instruction) =>
+    instruction.toLowerCase().includes("copy/paste"),
+  ),
+  true,
+);
 
 const runnerContinue = runInMemoryAlphaBetaWorkflow({
   ideaPrompt: {
