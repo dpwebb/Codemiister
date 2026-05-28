@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import path from "node:path";
 
 import { createAlphaDevelopmentPlan } from "../src/alpha/planner.ts";
 import { reviewBetaResult } from "../src/alpha/review.ts";
@@ -144,6 +146,9 @@ assert.equal(runnerHalt.status, "halted");
 assert.equal(runnerHalt.alphaReview?.driftRisk.level, "high");
 assert.equal(runnerHalt.alphaReview?.driftRisk.betaOverreachDetected, true);
 
+assertTranscriptPathRejected(path.resolve("transcripts", "absolute.md"));
+assertTranscriptPathRejected("../outside.md");
+
 console.log("drift-control validation passed");
 
 function createResultReport(
@@ -168,4 +173,25 @@ function createResultReport(
     nextStepRecommendation: "continue",
     ...overrides,
   };
+}
+
+function assertTranscriptPathRejected(outputPath: string): void {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "scripts/export-workflow-transcript.ts",
+      "Create a small planning assistant for bounded software tasks.",
+      "--out",
+      outputPath,
+    ],
+    {
+      encoding: "utf8",
+    },
+  );
+
+  assert.notEqual(result.status, 0);
+  assert.match(
+    `${result.stdout}${result.stderr}`,
+    /local relative path and must not contain/,
+  );
 }
