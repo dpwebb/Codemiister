@@ -11,8 +11,9 @@
     "dev": "vite",
     "build": "vite build",
     "project:context": "node scripts/project-context.ts",
-    "test": "npm run test:drift-control",
+    "test": "npm run test:drift-control && npm run test:ui-smoke",
     "test:drift-control": "node scripts/validate-drift-control.ts",
+    "test:ui-smoke": "node scripts/validate-ui-smoke.ts",
     "typecheck": "tsc --noEmit",
     "workflow:transcript": "node scripts/export-workflow-transcript.ts"
   },
