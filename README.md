@@ -51,6 +51,33 @@ npm run workflow:transcript -- -- "Create a simple project checklist app" --out 
 
 `workflow:transcript` writes files only when `--out` is supplied. Output paths must be local relative paths; absolute paths and paths containing `..` are rejected.
 
+## Manual Execution Handoff
+
+Codemiister still does not execute Codex automatically. ADMIN remains in control: execution request packages are local handoff artifacts, execution result packages are reported artifacts, and ALPHA review is deterministic based on the reported result unless ADMIN verifies more evidence separately.
+
+Safe handoff sequence:
+
+```powershell
+npm run project:context
+npm run beta:task -- "Create a simple project checklist app"
+npm run beta:execute:manual -- "Create a simple project checklist app"
+npm run execution:request -- -- "Create a simple project checklist app" --out transcripts/execution-request.json
+npm run execution:validate -- transcripts/execution-request.json
+```
+
+Then manually paste the BETA task or execution request package into Codex. Require BETA to return a structured result report/package before ALPHA review.
+
+```powershell
+npm run execution:result:validate -- transcripts/execution-result.json
+
+$result = '{\"filesChanged\":[\"src/domain/example.ts\"],\"behaviorChanged\":[\"Added small domain helper\"],\"validationRun\":[\"npm run typecheck\"],\"validationResult\":\"passed\",\"deviationsFromPrompt\":[],\"risks\":[],\"nextStepRecommendation\":\"continue\"}'
+npm run beta:review -- "Create a simple project checklist app" $result
+
+npm run workflow:transcript -- "Create a simple project checklist app" --out transcripts/example.md
+```
+
+Reported validation in an execution result package is BETA-reported. Treat it as evidence for ALPHA review, not independently verified fact.
+
 ## PowerShell Notes
 
 For inline JSON in Windows PowerShell, store the JSON in a variable or escape inner quotes:
