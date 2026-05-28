@@ -15,6 +15,7 @@
     "test:drift-control": "node scripts/validate-drift-control.ts",
     "test:ui-smoke": "node scripts/validate-ui-smoke.ts",
     "typecheck": "tsc --noEmit",
+    "workflow:json": "node scripts/export-workflow-json.ts",
     "workflow:transcript": "node scripts/export-workflow-transcript.ts"
   },
   "devDependencies": {
