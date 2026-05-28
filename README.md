@@ -78,6 +78,8 @@ npm run workflow:transcript -- "Create a simple project checklist app" --out tra
 
 Reported validation in an execution result package is BETA-reported. Treat it as evidence for ALPHA review, not independently verified fact.
 
+Executor strategy options and constraints are documented in [docs/executor-strategy.md](docs/executor-strategy.md).
+
 ## PowerShell Notes
 
 For inline JSON in Windows PowerShell, wrap the JSON argument in an outer quoted string and double the inner JSON quotes:
