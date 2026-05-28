@@ -139,14 +139,24 @@ h3 {
   align-items: start;
 }
 
+.review-workspace {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+  align-items: start;
+}
+
 .idea-form,
-.plan-preview {
+.review-form,
+.plan-preview,
+.review-preview {
   border: 1px solid #d9dde3;
   border-radius: 8px;
   background: #ffffff;
 }
 
-.idea-form {
+.idea-form,
+.review-form {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -154,6 +164,7 @@ h3 {
 }
 
 .idea-form label,
+.review-form label,
 .preview-label {
   color: #3d464f;
   font-size: 0.82rem;
@@ -161,9 +172,9 @@ h3 {
   text-transform: uppercase;
 }
 
-.idea-form textarea {
+.idea-form textarea,
+.review-form textarea {
   width: 100%;
-  min-height: 148px;
   resize: vertical;
   border: 1px solid #bfc7d1;
   border-radius: 8px;
@@ -172,12 +183,24 @@ h3 {
   background: #fbfcfd;
 }
 
-.idea-form textarea:focus {
+.idea-form textarea {
+  min-height: 148px;
+}
+
+.review-form textarea {
+  min-height: 272px;
+  font-family: "Cascadia Code", Consolas, "Liberation Mono", monospace;
+  font-size: 0.88rem;
+}
+
+.idea-form textarea:focus,
+.review-form textarea:focus {
   border-color: #1f6f5b;
   outline: 3px solid #d8ece5;
 }
 
-.idea-form button {
+.idea-form button,
+.review-form button {
   align-self: start;
   border: 0;
   border-radius: 8px;
@@ -188,15 +211,30 @@ h3 {
   cursor: pointer;
 }
 
-.idea-form button:hover {
+.idea-form button:hover,
+.review-form button:hover {
   background: #185947;
 }
 
-.plan-preview {
+.form-note {
+  margin-bottom: 0;
+  color: #5d6670;
+  font-size: 0.92rem;
+}
+
+.plan-preview,
+.review-preview {
   display: grid;
   gap: 14px;
-  min-height: 242px;
   padding: 18px;
+}
+
+.plan-preview {
+  min-height: 242px;
+}
+
+.review-preview {
+  min-height: 352px;
 }
 
 .empty-preview {
@@ -204,7 +242,15 @@ h3 {
   color: #5d6670;
 }
 
+.error-preview {
+  align-content: start;
+  border-color: #d9aaa3;
+  background: #fff8f6;
+  color: #70312b;
+}
+
 .empty-preview p,
+.error-preview p,
 .preview-group p,
 .compact-group strong {
   margin-bottom: 0;
@@ -305,6 +351,7 @@ h3 {
 @media (max-width: 860px) {
   .shell-header,
   .idea-workspace,
+  .review-workspace,
   .preview-columns,
   .role-grid,
   .workflow-list {
