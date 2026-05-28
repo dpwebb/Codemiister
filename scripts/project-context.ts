@@ -34,6 +34,7 @@ printListSection("Key Source Directories and Files", [
   "src/beta/task.ts - BETA task prompt builder",
   "src/alpha/review.ts - ALPHA review helper",
   "src/workflow/runner.ts - in-memory workflow runner",
+  "src/ui/ - local browser UI shell for the manual workflow",
   "scripts/*.ts - local manual workflow CLIs and validation",
 ]);
 printListSection("Manual Workflow Command Sequence", [
@@ -48,7 +49,7 @@ printListSection("Current Deferred Capabilities", [
   "External AI/provider calls",
   "Database or general persistence layer",
   "Authentication or multi-user support",
-  "Web server or UI",
+  "Backend server or API",
   "Queues, workers, or orchestration runtime",
   "Billing or deployment automation",
 ]);

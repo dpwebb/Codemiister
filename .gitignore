@@ -1,2 +1,5 @@
 node_modules/
 dist/
+transcripts/*.json
+transcripts/*.md
+codemiister-vite*.log

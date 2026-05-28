@@ -81,9 +81,12 @@ function validateExecutionRequestPackage(
   getRequiredString(value, "packageVersion", errors);
   getRequiredString(value, "generatedAt", errors);
   getRequiredRecord(value, "adminIdea", errors);
+  getRequiredRecord(value, "alphaPlanSummary", errors);
   const betaTask = getRequiredRecord(value, "betaTask", errors);
   const readiness = getRequiredRecord(value, "executionReadiness", errors);
+  getRequiredArray(value, "validationSuggestions", errors, "", true);
   getRequiredArray(value, "requiredResultReportFormat", errors, "", true);
+  getRequiredString(value, "noExecutionStatement", errors);
 
   const taskTitle = betaTask
     ? getStringField(betaTask, "taskTitle") || getStringField(betaTask, "title")

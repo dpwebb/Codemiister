@@ -2,7 +2,7 @@
 
 Codemiister is the current scaffold for Automated Coder, a manual Alpha/Beta workflow for creating applications through small, reviewable, drift-controlled steps.
 
-This repository does not automate Codex execution yet. It provides local CLI tools for intake, task export, manual result review, and transcript generation.
+This repository does not automate Codex execution yet. It provides local CLI tools and a browser UI shell for intake, task export, manual result review, and transcript generation.
 
 ## Roles
 
@@ -27,7 +27,7 @@ npm run beta:task -- "Create a simple project checklist app"
 3. Review a manually supplied BETA result:
 
 ```powershell
-$result = '{\"filesChanged\":[\"src/domain/example.ts\"],\"behaviorChanged\":[\"Added small domain helper\"],\"validationRun\":[\"npm run typecheck\"],\"validationResult\":\"passed\",\"deviationsFromPrompt\":[],\"risks\":[],\"nextStepRecommendation\":\"continue\"}'
+$result = '"{""filesChanged"":[""src/domain/example.ts""],""behaviorChanged"":[""Added small domain helper""],""validationRun"":[""npm run typecheck""],""validationResult"":""passed"",""deviationsFromPrompt"":[],""risks"":[],""nextStepRecommendation"":""continue""}"'
 npm run beta:review -- "Create a simple project checklist app" $result
 ```
 
@@ -70,7 +70,7 @@ Then manually paste the BETA task or execution request package into Codex. Requi
 ```powershell
 npm run execution:result:validate -- transcripts/execution-result.json
 
-$result = '{\"filesChanged\":[\"src/domain/example.ts\"],\"behaviorChanged\":[\"Added small domain helper\"],\"validationRun\":[\"npm run typecheck\"],\"validationResult\":\"passed\",\"deviationsFromPrompt\":[],\"risks\":[],\"nextStepRecommendation\":\"continue\"}'
+$result = '"{""filesChanged"":[""src/domain/example.ts""],""behaviorChanged"":[""Added small domain helper""],""validationRun"":[""npm run typecheck""],""validationResult"":""passed"",""deviationsFromPrompt"":[],""risks"":[],""nextStepRecommendation"":""continue""}"'
 npm run beta:review -- "Create a simple project checklist app" $result
 
 npm run workflow:transcript -- "Create a simple project checklist app" --out transcripts/example.md
@@ -80,10 +80,10 @@ Reported validation in an execution result package is BETA-reported. Treat it as
 
 ## PowerShell Notes
 
-For inline JSON in Windows PowerShell, store the JSON in a variable or escape inner quotes:
+For inline JSON in Windows PowerShell, wrap the JSON argument in an outer quoted string and double the inner JSON quotes:
 
 ```powershell
-$result = '{\"filesChanged\":[\"src/domain/example.ts\"],\"behaviorChanged\":[\"Added small domain helper\"],\"validationRun\":[\"npm run typecheck\"],\"validationResult\":\"passed\",\"deviationsFromPrompt\":[],\"risks\":[],\"nextStepRecommendation\":\"continue\"}'
+$result = '"{""filesChanged"":[""src/domain/example.ts""],""behaviorChanged"":[""Added small domain helper""],""validationRun"":[""npm run typecheck""],""validationResult"":""passed"",""deviationsFromPrompt"":[],""risks"":[],""nextStepRecommendation"":""continue""}"'
 npm run beta:review -- "Create a simple project checklist app" $result
 ```
 
@@ -106,4 +106,4 @@ npm run demo
 npm run demo:drift
 ```
 
-No database, server, UI, authentication, external AI provider, Codex API automation, queue, worker, or deployment runtime is included.
+No database, backend server, authentication, external AI provider, Codex API automation, queue, worker, or deployment runtime is included.
