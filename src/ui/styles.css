@@ -1,0 +1,216 @@
+:root {
+  color: #1d1f23;
+  background: #f5f6f8;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #f5f6f8;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+.shell-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: stretch;
+  padding: 28px;
+  border: 1px solid #d9dde3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #6c3f00;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 12px;
+  font-size: clamp(2.25rem, 7vw, 4rem);
+  line-height: 0.96;
+  letter-spacing: 0;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+h3 {
+  margin-bottom: 10px;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.purpose {
+  max-width: 720px;
+  margin-bottom: 0;
+  color: #4d535c;
+  font-size: 1.05rem;
+}
+
+.status-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 180px;
+  padding: 20px;
+  border: 1px solid #cbd7cd;
+  border-radius: 8px;
+  background: #f7fbf7;
+  color: #2b4530;
+}
+
+.status-label {
+  color: #40664a;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-panel strong {
+  display: block;
+  font-size: 1.35rem;
+}
+
+.status-panel span:last-child {
+  color: #51615a;
+  font-size: 0.95rem;
+}
+
+.section-block {
+  margin-top: 24px;
+  padding: 24px 0 0;
+}
+
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #d9dde3;
+  padding-bottom: 12px;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.role-card {
+  min-height: 148px;
+  padding: 18px;
+  border: 1px solid #d9dde3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.role-card p {
+  margin-bottom: 0;
+  color: #4d535c;
+}
+
+.workflow-list {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflow-list li {
+  min-height: 96px;
+  padding: 14px;
+  border: 1px solid #d9dde3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #2f343a;
+  font-weight: 700;
+}
+
+.stage-number {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  background: #1f6f5b;
+  color: #ffffff;
+  font-size: 0.88rem;
+  line-height: 28px;
+  text-align: center;
+}
+
+.deferred-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deferred-list li {
+  padding: 10px 12px;
+  border: 1px solid #decac6;
+  border-radius: 8px;
+  background: #fff8f6;
+  color: #6a332d;
+  font-weight: 700;
+}
+
+@media (max-width: 860px) {
+  .shell-header,
+  .role-grid,
+  .workflow-list {
+    grid-template-columns: 1fr;
+  }
+
+  .status-panel,
+  .role-card,
+  .workflow-list li {
+    min-height: auto;
+  }
+}

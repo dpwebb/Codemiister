@@ -8,6 +8,8 @@
     "beta:task": "node scripts/export-beta-task.ts",
     "demo": "node scripts/demo-alpha-beta-loop.ts",
     "demo:drift": "node scripts/demo-alpha-beta-loop.ts --drift",
+    "dev": "vite",
+    "build": "vite build",
     "project:context": "node scripts/project-context.ts",
     "test": "npm run test:drift-control",
     "test:drift-control": "node scripts/validate-drift-control.ts",
@@ -16,6 +18,14 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
-    "typescript": "^6.0.3"
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  },
+  "dependencies": {
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
   }
 }
