@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "admin:idea": "node scripts/admin-idea.ts",
     "demo": "node scripts/demo-alpha-beta-loop.ts",
     "demo:drift": "node scripts/demo-alpha-beta-loop.ts --drift",
     "test": "npm run test:drift-control",
