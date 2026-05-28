@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { createAlphaDevelopmentPlan } from "../src/alpha/planner.ts";
 import { reviewBetaResult } from "../src/alpha/review.ts";
+import { runInMemoryAlphaBetaWorkflow } from "../src/workflow/runner.ts";
 import type { BetaResultReport } from "../src/domain/workflow.ts";
 
 const now = "2026-05-28T00:00:00.000Z";
@@ -99,6 +100,50 @@ assert.equal(haltReview.driftRisk.betaOverreachDetected, true);
 assert.equal(haltReview.driftRisk.haltRecommended, true);
 assert.equal(haltReview.nextTaskReady, false);
 
+const runnerContinue = runInMemoryAlphaBetaWorkflow({
+  ideaPrompt: {
+    id: "runner-idea-001",
+    submittedAt: now,
+    goal: "Coordinate one bounded Alpha/Beta workflow loop.",
+  },
+  existingProjectContextSummary:
+    "Repository contains deterministic workflow contracts.",
+  now,
+});
+
+assert.ok(runnerContinue.developmentPlan);
+assert.ok(runnerContinue.betaTask);
+assert.ok(runnerContinue.betaResult);
+assert.equal(runnerContinue.developmentPlan.id.length > 0, true);
+assert.equal(runnerContinue.betaTask.id.length > 0, true);
+assert.equal(runnerContinue.betaResult.id.length > 0, true);
+assert.equal(runnerContinue.alphaReview?.decision, "continue");
+assert.equal(runnerContinue.status, "next_task_ready");
+
+const runnerHalt = runInMemoryAlphaBetaWorkflow({
+  ideaPrompt: {
+    id: "runner-idea-002",
+    submittedAt: now,
+    goal: "Coordinate one bounded Alpha/Beta workflow loop.",
+  },
+  betaResultReport: createResultReport({
+    taskPromptId: "beta-task-runner-idea-002-001",
+    filesChanged: ["package.json"],
+    behaviorChanged:
+      "Added database persistence outside the allowed task scope.",
+    deviationsFromPrompt: ["Changed package.json outside allowed areas."],
+    risks: ["Database persistence is a forbidden change for this task."],
+    validationResult: "passed",
+    nextStepRecommendation: "continue",
+  }),
+  now,
+});
+
+assert.equal(runnerHalt.alphaReview?.decision, "halt_for_admin");
+assert.equal(runnerHalt.status, "halted");
+assert.equal(runnerHalt.alphaReview?.driftRisk.level, "high");
+assert.equal(runnerHalt.alphaReview?.driftRisk.betaOverreachDetected, true);
+
 console.log("drift-control validation passed");
 
 function createResultReport(
@@ -124,4 +169,3 @@ function createResultReport(
     ...overrides,
   };
 }
-
