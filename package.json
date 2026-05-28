@@ -10,7 +10,8 @@
     "demo:drift": "node scripts/demo-alpha-beta-loop.ts --drift",
     "test": "npm run test:drift-control",
     "test:drift-control": "node scripts/validate-drift-control.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "workflow:transcript": "node scripts/export-workflow-transcript.ts"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
